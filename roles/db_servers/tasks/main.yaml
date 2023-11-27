@@ -1,12 +1,54 @@
 ---
-
 - name: Add OpenStack repository on Ubuntu Focal (Bobcat)
   become: yes
   become_user: root
   shell: add-apt-repository cloud-archive:bobcat -y
 
+- name: Allow 10.0.0.0/24 in chrony.conf
+  lineinfile:
+    path: /etc/chrony/chrony.conf
+    line: 'allow 10.0.0.0/24'
 
-- name: Install NTP
+- name: Configure MySQL
+  blockinfile:
+    path: /etc/mysql/my.cnf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - MYSQL"
+    block: |
+      [mysqld]
+      bind-address = 10.0.0.11
+      default-storage-engine = innodb
+      innodb_file_per_table = on
+      max_connections = 4096
+      collation-server = utf8_general_ci
+      character-set-server = utf8
+
+- name: Configure RabbitMQ
+  shell:
+    cmd: |
+      rabbitmqctl add_user openstack RABBIT_PASS
+      rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+
+- name: Configure Memcached
+  lineinfile:
+    path: /etc/memcached.conf
+    line: '-l 10.0.0.11'
+
+- name: Edit /etc/default/etcd file
+  blockinfile:
+    path: /etc/default/etcd
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - ETCD"
+    block: |
+      ETCD_NAME="controller"
+      ETCD_DATA_DIR="/var/lib/etcd"
+      ETCD_INITIAL_CLUSTER_STATE="new"
+      ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster-01"
+      ETCD_INITIAL_CLUSTER="controller=http://10.0.0.11:2380"
+      ETCD_INITIAL_ADVERTISE_PEER_URLS="http://10.0.0.11:2380"
+      ETCD_ADVERTISE_CLIENT_URLS="http://10.0.0.11:2379"
+      ETCD_LISTEN_PEER_URLS="http://0.0.0.0:2380"
+      ETCD_LISTEN_CLIENT_URLS="http://10.0.0.11:2379"
+
+- name: Install NTP (Chrony)
   apt:
     name: chrony
     state: present
@@ -18,7 +60,7 @@
   loop:
     - python3-openstackclient
 
-- name: Install SQL database
+- name: Install SQL database (MariaDB)
   apt:
     name: "{{ item }}"
     state: present

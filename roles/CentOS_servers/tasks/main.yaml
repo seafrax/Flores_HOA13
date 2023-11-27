@@ -9,7 +9,7 @@
     dest: /etc/yum.repos.d/epel.repo
     section: epel
     option: disabled
-    value: 1
+    value: 0
 
 - name: Install NTP
   yum:
@@ -22,10 +22,10 @@
     state: present
   loop:
     - python-openstackclient
-    - centos-release-openstack-queens   
-    - openstack-packstack
+    - centos-release-openstack-queens
+    - https://rdoproject.org/repos/rdo-release.rpm
 
-- name: Install SQL database
+- name: Install SQL database (MariaDB)
   yum:
     name: "{{ item }}"
     state: present
@@ -38,12 +38,80 @@
     name: rabbitmq-server
     state: present
 
+- name: Start RabbitMQ service
+  systemd:
+    name: rabbitmq-server
+    state: started
+    enabled: yes
+
+- name: Wait for RabbitMQ to start
+  wait_for:
+    host: localhost
+    port: 5672
+    timeout: 60
+
+
 - name: Install Memcached
   yum:
     name: memcached
     state: present
 
+- name: Start Memcached service
+  systemd:
+    name: memcached
+    state: started
+    enabled: yes
+
+
 - name: Install etcd
   yum:
     name: etcd
     state: present
+
+- name: Start etcd service
+  systemd:
+    name: etcd
+    state: started
+    enabled: yes
+
+- name: Configure MySQL
+  ini_file:
+    dest: /etc/my.cnf
+    section: mysqld
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+  loop:
+    - { key: 'bind-address', value: '10.0.0.11' }
+    - { key: 'default-storage-engine', value: 'innodb' }
+    - { key: 'innodb_file_per_table', value: 'on' }
+    - { key: 'max_connections', value: '4096' }
+    - { key: 'collation-server', value: 'utf8_general_ci' }
+    - { key: 'character-set-server', value: 'utf8' }
+
+- name: Configure RabbitMQ
+  shell:
+    cmd: |
+      rabbitmqctl add_user openstack RABBIT_PASS
+      rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+
+- name: Configure Memcached
+  lineinfile:
+    path: /etc/sysconfig/memcached
+    line: 'OPTIONS="-l 127.0.0.1,::1,controller"'
+
+- name: Configure etcd
+  ini_file:
+    dest: /etc/etcd/etcd.conf
+    section: Member
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+  loop:
+    - { key: 'ETCD_DATA_DIR', value: '/var/lib/etcd/default.etcd' }
+    - { key: 'ETCD_LISTEN_PEER_URLS', value: 'http://10.0.0.11:2380' }
+    - { key: 'ETCD_LISTEN_CLIENT_URLS', value: 'http://10.0.0.11:2379' }
+    - { key: 'ETCD_NAME', value: 'controller' }
+    - { key: 'ETCD_INITIAL_ADVERTISE_PEER_URLS', value: 'http://10.0.0.11:2380' }
+    - { key: 'ETCD_ADVERTISE_CLIENT_URLS', value: 'http://10.0.0.11:2379' }
+    - { key: 'ETCD_INITIAL_CLUSTER', value: 'controller=http://10.0.0.11:2380' }
+    - { key: 'ETCD_INITIAL_CLUSTER_TOKEN', value: 'etcd-cluster-01' }
+    - { key: 'ETCD_INITIAL_CLUSTER_STATE', value: 'new' }
