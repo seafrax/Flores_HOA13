@@ -10,10 +10,6 @@
     state: present
   loop:
     - python3-openstackclient
-    - python3-novaclient
-    - python3-neutronclient
-    - python3-glanceclient
-    - python3-heatclient
 
 - name: Install SQL database
   apt:

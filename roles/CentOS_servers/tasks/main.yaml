@@ -22,7 +22,7 @@
     state: present
   loop:
     - python-openstackclient
-    - centos-release-openstack-queens   # Adjust to your desired OpenStack release
+    - centos-release-openstack-queens   
     - openstack-packstack
 
 - name: Install SQL database
