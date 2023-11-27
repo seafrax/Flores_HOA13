@@ -1,4 +1,11 @@
 ---
+
+- name: Add OpenStack repository on Ubuntu Focal (Bobcat)
+  become: yes
+  become_user: root
+  shell: add-apt-repository cloud-archive:bobcat -y
+
+
 - name: Install NTP
   apt:
     name: ntp
