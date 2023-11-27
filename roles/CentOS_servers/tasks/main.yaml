@@ -1,0 +1,49 @@
+---
+- name: Add EPEL repository
+  yum:
+    name: epel-release
+    state: present
+
+- name: Ensure EPEL repository is enabled
+  ini_file:
+    dest: /etc/yum.repos.d/epel.repo
+    section: epel
+    option: disabled
+    value: 1
+
+- name: Install NTP
+  yum:
+    name: ntp
+    state: present
+
+- name: Install OpenStack packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - python-openstackclient
+    - centos-release-openstack-queens   # Adjust to your desired OpenStack release
+    - openstack-packstack
+
+- name: Install SQL database
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - mariadb-server
+    - MySQL-python
+
+- name: Install Message Queue (RabbitMQ)
+  yum:
+    name: rabbitmq-server
+    state: present
+
+- name: Install Memcached
+  yum:
+    name: memcached
+    state: present
+
+- name: Install etcd
+  yum:
+    name: etcd
+    state: present

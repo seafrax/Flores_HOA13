@@ -1,0 +1,41 @@
+---
+- name: Install NTP
+  apt:
+    name: ntp
+    state: present
+
+- name: Install OpenStack packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - python3-openstackclient
+    - python3-novaclient
+    - python3-neutronclient
+    - python3-glanceclient
+    - python3-heatclient
+
+- name: Install SQL database
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - mariadb-server
+    - python3-pymysql
+
+- name: Install Message Queue (RabbitMQ)
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - rabbitmq-server
+
+- name: Install Memcached
+  apt:
+    name: memcached
+    state: present
+
+- name: Install etcd
+  apt:
+    name: etcd
+    state: present
