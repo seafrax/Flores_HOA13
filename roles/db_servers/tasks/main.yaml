@@ -8,7 +8,7 @@
 
 - name: Install NTP
   apt:
-    name: ntp
+    name: chrony
     state: present
 
 - name: Install OpenStack packages
